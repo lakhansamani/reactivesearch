@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Router, Route, Switch } from 'react-router-dom';
+import { Route, Switch, BrowserRouter } from 'react-router-dom';
 import Loadable from 'react-loadable';
 import ToolsPageNative from './pages/native/Tools';
 import LearnPageNative from './pages/native/QuickStart';
@@ -40,12 +40,8 @@ const HomePageVue = Loadable({
 // 	loading: Loading,
 // });
 
-const history = createHistory({
-	basename: '/reactivesearch',
-});
-
 ReactDOM.render(
-	<Router history={history}>
+	<BrowserRouter basename="/reactivesearch">
 		<Switch>
 			<Route exact path="/" component={HomePage} />
 			<Route exact path="/tools" component={ToolsPage} />
@@ -68,6 +64,6 @@ ReactDOM.render(
 			<Route exact path="/reactivesearch/vue" component={HomePageVue} />
 			<Route path="*" component={HomePage} />
 		</Switch>
-	</Router>,
+	</BrowserRouter>,
 	document.getElementById('root'),
 );
