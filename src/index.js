@@ -40,36 +40,34 @@ const HomePageVue = Loadable({
 // 	loading: Loading,
 // });
 
-const history = createHistory({
-	basename: '/reactivesearch',
-});
+// const history = createHistory({
+// 	basename: '/reactivesearch',
+// });
 
 ReactDOM.render(
 	<BrowserRouter basename="/reactivesearch">
-		<Router history={history}>
-			<Switch>
-				<Route exact path="/" component={HomePage} />
-				<Route exact path="/tools" component={ToolsPage} />
-				<Route exact path="/reactivesearch/tools" component={ToolsPage} />
-				<Route exact path="/quickstart" component={LearnPage} />
-				<Route exact path="/reactivesearch/quickstart" component={LearnPage} />
-				<Route exact path="/demo" component={DemoPage} />
-				<Route exact path="/reactivesearch/demo" component={DemoPage} />
-				<Route exact path="/native/tools" component={ToolsPageNative} />
-				<Route exact path="/reactivesearch/native/tools" component={ToolsPageNative} />
-				<Route exact path="/native/quickstart" component={LearnPageNative} />
-				<Route exact path="/reactivesearch/native/quickstart" component={LearnPageNative} />
-				<Route exact path="/native" component={HomePageNative} />
-				<Route exact path="/reactivesearch/native" component={HomePageNative} />
-				<Route exact path="/vue/tools" component={ToolsPageVue} />
-				<Route exact path="/reactivesearch/vue/tools" component={ToolsPageVue} />
-				<Route exact path="/vue/quickstart" component={LearnPageVue} />
-				<Route exact path="/reactivesearch/vue/quickstart" component={LearnPageVue} />
-				<Route exact path="/vue" component={HomePageVue} />
-				<Route exact path="/reactivesearch/vue" component={HomePageVue} />
-				<Route path="*" component={HomePage} />
-			</Switch>
-		</Router>
+		<Switch>
+			<Route exact path="/" component={HomePage} />
+			<Route exact path="/tools" component={ToolsPage} />
+			<Route exact path="/reactivesearch/tools" component={ToolsPage} />
+			<Route exact path="/quickstart" component={LearnPage} />
+			<Route exact path="/reactivesearch/quickstart" component={LearnPage} />
+			<Route exact path="/demo" component={DemoPage} />
+			<Route exact path="/reactivesearch/demo" component={DemoPage} />
+			<Route exact path="/native/tools" component={ToolsPageNative} />
+			<Route exact path="/reactivesearch/native/tools" component={ToolsPageNative} />
+			<Route exact path="/native/quickstart" component={LearnPageNative} />
+			<Route exact path="/reactivesearch/native/quickstart" component={LearnPageNative} />
+			<Route exact path="/native" component={HomePageNative} />
+			<Route exact path="/reactivesearch/native" component={HomePageNative} />
+			<Route exact path="/vue/tools" component={ToolsPageVue} />
+			<Route exact path="/reactivesearch/vue/tools" component={ToolsPageVue} />
+			<Route exact path="/vue/quickstart" component={LearnPageVue} />
+			<Route exact path="/reactivesearch/vue/quickstart" component={LearnPageVue} />
+			<Route exact path="/vue" component={HomePageVue} />
+			<Route exact path="/reactivesearch/vue" component={HomePageVue} />
+			<Route path="*" component={HomePage} />
+		</Switch>
 	</BrowserRouter>,
 	document.getElementById('root'),
 );
