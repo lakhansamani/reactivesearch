@@ -22,13 +22,20 @@ import {
 
 import types from '@appbaseio/reactivecore/lib/utils/types';
 
-import { getAggsQuery, getCompositeAggsQuery } from './utils';
+import { getAggsQuery, getCompositeAggsQuery, updateInternalQuery } from './utils';
 import Title from '../../styles/Title';
 import Input from '../../styles/Input';
 import Button, { loadMoreContainer } from '../../styles/Button';
 import Container from '../../styles/Container';
 import { UL, Radio } from '../../styles/FormControlList';
-import { connect, isFunction } from '../../utils';
+import {
+	connect,
+	isFunction,
+	getComponent,
+	hasCustomRenderer,
+	isEvent,
+	isIdentical,
+} from '../../utils';
 
 // showLoadMore is experimental API and works only with ES6
 class SingleList extends Component {
@@ -45,7 +52,8 @@ class SingleList extends Component {
 					? this.getOptions(props.options[props.dataField].buckets, props)
 					: [],
 			searchTerm: '',
-			after: {}, // for composite aggs
+			after: {}, // for composite aggs,
+			prevAfter: {}, // useful when we want to prevent the showLoadMore results
 			isLastBucket: false,
 		};
 		this.locked = false;
@@ -73,13 +81,14 @@ class SingleList extends Component {
 			if (showLoadMore) {
 				const { buckets } = options[dataField];
 				const after = options[dataField].after_key;
-
+				const prevAfter = prevProps.options && prevProps.options[dataField].after_key;
 				// detect the last bucket by checking if the
 				// after key is absent
 				const isLastBucket = !after;
 				this.setState(state => ({
 					...state,
 					after: after ? { after } : state.after,
+					prevAfter: prevAfter ? { after: prevAfter } : state.prevAfter,
 					isLastBucket,
 					options: this.getOptions(buckets, this.props),
 				}));
@@ -91,6 +100,17 @@ class SingleList extends Component {
 				});
 			}
 		});
+
+		// Treat defaultQuery and customQuery as reactive props
+		if (!isIdentical(this.props.defaultQuery, prevProps.defaultQuery)) {
+			this.updateDefaultQuery();
+			// Clear the component value
+			this.updateQuery('', this.props);
+		}
+
+		if (!isIdentical(this.props.customQuery, prevProps.customQuery)) {
+			this.updateQuery(this.state.currentValue, this.props);
+		}
 
 		checkSomePropChange(prevProps, this.props, ['size', 'sortBy'], () =>
 			this.updateQueryOptions(this.props),
@@ -232,7 +252,10 @@ class SingleList extends Component {
 			({ query } = customQuery(value, props) || {});
 			customQueryOptions = getOptionsFromQuery(customQuery(value, props));
 		}
-		props.setQueryOptions(props.componentId, customQueryOptions);
+		props.setQueryOptions(props.componentId, {
+			...SingleList.generateQueryOptions(props, this.state.prevAfter),
+			...customQueryOptions,
+		});
 		props.updateQuery({
 			componentId: props.componentId,
 			query,
@@ -242,6 +265,16 @@ class SingleList extends Component {
 			URLParams: props.URLParams,
 			componentType: 'SINGLELIST',
 		});
+	};
+
+	updateDefaultQuery = (queryOptions) => {
+		updateInternalQuery(
+			this.internalComponent,
+			queryOptions,
+			this.state.currentValue,
+			this.props,
+			SingleList.generateQueryOptions(this.props, this.state.prevAfter),
+		);
 	};
 
 	static generateQueryOptions(props, after) {
@@ -264,10 +297,7 @@ class SingleList extends Component {
 			addAfterKey ? this.state.after : {},
 		);
 		if (props.defaultQuery) {
-			const value = this.state.currentValue;
-			const defaultQueryOptions = getOptionsFromQuery(props.defaultQuery(value, props));
-			props.setQueryOptions(this.internalComponent,
-				{ ...queryOptions, ...defaultQueryOptions });
+			this.updateDefaultQuery(queryOptions);
 		} else {
 			props.setQueryOptions(this.internalComponent, queryOptions);
 		}
@@ -304,14 +334,55 @@ class SingleList extends Component {
 	};
 
 	handleClick = (e) => {
+		let currentValue = e;
+		if (isEvent(e)) {
+			currentValue = e.target.value;
+		}
 		const { value, onChange } = this.props;
-		const { value: listValue } = e.target;
 		if (value === undefined) {
-			this.setValue(listValue);
+			this.setValue(currentValue);
 		} else if (onChange) {
-			onChange(listValue);
+			onChange(currentValue);
 		}
 	};
+
+	get hasCustomRenderer() {
+		return hasCustomRenderer(this.props);
+	}
+
+	get listItems() {
+		let { options: itemsToRender } = this.state;
+		if (this.props.transformData) {
+			itemsToRender = this.props.transformData(itemsToRender);
+		}
+
+		const listItems = itemsToRender.filter((item) => {
+			if (String(item.key).length) {
+				if (this.props.showSearch && this.state.searchTerm) {
+					return String(item.key)
+						.toLowerCase()
+						.includes(this.state.searchTerm.toLowerCase());
+				}
+				return true;
+			}
+			return false;
+		});
+
+		return listItems;
+	}
+
+	getComponent() {
+		const { error, isLoading } = this.props;
+		const { currentValue } = this.state;
+		const data = {
+			error,
+			loading: isLoading,
+			value: currentValue,
+			data: this.listItems,
+			handleChange: this.handleClick,
+		};
+		return getComponent(data, this.props);
+	}
 
 	render() {
 		const {
@@ -332,27 +403,9 @@ class SingleList extends Component {
 			return isFunction(renderError) ? renderError(error) : renderError;
 		}
 
-		if (this.state.options.length === 0) {
+		if (!this.hasCustomRenderer && this.state.options.length === 0) {
 			return null;
 		}
-
-		let { options: itemsToRender } = this.state;
-
-		if (this.props.transformData) {
-			itemsToRender = this.props.transformData(itemsToRender);
-		}
-
-		const listItems = itemsToRender.filter((item) => {
-			if (String(item.key).length) {
-				if (this.props.showSearch && this.state.searchTerm) {
-					return String(item.key)
-						.toLowerCase()
-						.includes(this.state.searchTerm.toLowerCase());
-				}
-				return true;
-			}
-			return false;
-		});
 
 		return (
 			<Container style={this.props.style} className={this.props.className}>
@@ -362,83 +415,87 @@ class SingleList extends Component {
 					</Title>
 				)}
 				{this.renderSearch()}
-				<UL className={getClassName(this.props.innerClass, 'list') || null}>
-					{selectAllLabel ? (
-						<li
-							key={selectAllLabel}
-							className={`${
-								this.state.currentValue === selectAllLabel ? 'active' : ''
-							}`}
-						>
-							<Radio
-								className={getClassName(this.props.innerClass, 'radio')}
-								id={`${this.props.componentId}-${selectAllLabel}`}
-								name={this.props.componentId}
-								value={selectAllLabel}
-								onClick={this.handleClick}
-								readOnly
-								checked={this.state.currentValue === selectAllLabel}
-								show={this.props.showRadio}
-							/>
-							<label
-								className={getClassName(this.props.innerClass, 'label') || null}
-								htmlFor={`${this.props.componentId}-${selectAllLabel}`}
+				{this.hasCustomRenderer ? (
+					this.getComponent()
+				) : (
+					<UL className={getClassName(this.props.innerClass, 'list') || null}>
+						{selectAllLabel ? (
+							<li
+								key={selectAllLabel}
+								className={`${
+									this.state.currentValue === selectAllLabel ? 'active' : ''
+								}`}
 							>
-								{selectAllLabel}
-							</label>
-						</li>
-					) : null}
-					{listItems.length
-						? listItems.map((item) => {
-							const isChecked = this.state.currentValue === String(item.key);
-							return (
-								<li key={item.key} className={`${isChecked ? 'active' : ''}`}>
-									<Radio
-										className={getClassName(this.props.innerClass, 'radio')}
-										id={`${this.props.componentId}-${item.key}`}
-										name={this.props.componentId}
-										value={item.key}
-										readOnly
-										onClick={this.handleClick}
-										checked={isChecked}
-										show={this.props.showRadio}
-									/>
-									<label
-										className={
-											getClassName(this.props.innerClass, 'label') || null
-										}
-										htmlFor={`${this.props.componentId}-${item.key}`}
-									>
-										{renderItem ? (
-											renderItem(item.key, item.doc_count, isChecked)
-										) : (
-											<span>
-												<span>{item.key}</span>
-												{this.props.showCount && (
-													<span
-														className={
-															getClassName(
-																this.props.innerClass,
-																'count',
-															) || null
-														}
-													>
-														{item.doc_count}
-													</span>
-												)}
-											</span>
-										)}
-									</label>
-								</li>
-							);
-						}) // prettier-ignore
-						: this.props.renderNoResults && this.props.renderNoResults()}
-					{showLoadMore && !isLastBucket && (
-						<div css={loadMoreContainer}>
-							<Button onClick={this.handleLoadMore}>{loadMoreLabel}</Button>
-						</div>
-					)}
-				</UL>
+								<Radio
+									className={getClassName(this.props.innerClass, 'radio')}
+									id={`${this.props.componentId}-${selectAllLabel}`}
+									name={this.props.componentId}
+									value={selectAllLabel}
+									onClick={this.handleClick}
+									readOnly
+									checked={this.state.currentValue === selectAllLabel}
+									show={this.props.showRadio}
+								/>
+								<label
+									className={getClassName(this.props.innerClass, 'label') || null}
+									htmlFor={`${this.props.componentId}-${selectAllLabel}`}
+								>
+									{selectAllLabel}
+								</label>
+							</li>
+						) : null}
+						{this.listItems.length
+							? this.listItems.map((item) => {
+								const isChecked = this.state.currentValue === String(item.key);
+								return (
+									<li key={item.key} className={`${isChecked ? 'active' : ''}`}>
+										<Radio
+											className={getClassName(this.props.innerClass, 'radio')}
+											id={`${this.props.componentId}-${item.key}`}
+											name={this.props.componentId}
+											value={item.key}
+											readOnly
+											onClick={this.handleClick}
+											checked={isChecked}
+											show={this.props.showRadio}
+										/>
+										<label
+											className={
+												getClassName(this.props.innerClass, 'label') || null
+											}
+											htmlFor={`${this.props.componentId}-${item.key}`}
+										>
+											{renderItem ? (
+												renderItem(item.key, item.doc_count, isChecked)
+											) : (
+												<span>
+													<span>{item.key}</span>
+													{this.props.showCount && (
+														<span
+															className={
+																getClassName(
+																	this.props.innerClass,
+																	'count',
+																) || null
+															}
+														>
+															{item.doc_count}
+														</span>
+													)}
+												</span>
+											)}
+										</label>
+									</li>
+								);
+							}) // prettier-ignore
+							: this.props.renderNoResults && this.props.renderNoResults()}
+						{showLoadMore && !isLastBucket && (
+							<div css={loadMoreContainer}>
+								<Button onClick={this.handleLoadMore}>{loadMoreLabel}</Button>
+							</div>
+						)}
+					</UL>
+				)}
 			</Container>
 		);
 	}
@@ -456,6 +513,7 @@ SingleList.propTypes = {
 	selectedValue: types.selectedValue,
 	// component props
 	beforeValueChange: types.func,
+	children: types.func,
 	className: types.string,
 	componentId: types.stringRequired,
 	customQuery: types.func,
@@ -474,6 +532,7 @@ SingleList.propTypes = {
 	onChange: types.func,
 	placeholder: types.string,
 	react: types.react,
+	render: types.func,
 	renderItem: types.func,
 	renderError: types.title,
 	renderNoResults: types.func,

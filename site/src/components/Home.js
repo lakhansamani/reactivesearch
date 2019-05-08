@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
-import { Navbar, Logo, Button, H3, Title, Flex, GithubButton, Grid } from '@appbaseio/designkit';
+import {
+ Navbar, Logo, Button, H3, Title, Flex, GithubButton, Grid,
+} from '@appbaseio/designkit';
 import { HashLink as Link } from 'react-router-hash-link';
 import { css } from 'emotion';
 import { ThemeProvider } from 'emotion-theming';
@@ -29,6 +31,8 @@ import H2 from '../styles/H2';
 import queries from '../styles/mediaQueries';
 import { getButtonStyle, getLinkStyle } from '../styles/utils';
 import DiscoverRS from './DiscoverRS';
+import AppbaseUsers from './AppbaseUsers';
+import DownloadStats from './DownloadStats';
 
 const button = {
 	fontSize: '14px',
@@ -277,7 +281,8 @@ class HomePage extends Component {
 							<Layout>
 								<div className={titleRow}>
 									{config.banner6.button ? (
-										<H3 style={{
+										<H3
+											style={{
 												paddingBottom: 50,
 											}}
 										>
@@ -412,8 +417,9 @@ class HomePage extends Component {
 							<Layout>
 								<div className={titleRow}>
 									{config.banner7.button ? (
-										<H3 style={{
-											paddingBottom: 50,
+										<H3
+											style={{
+												paddingBottom: 50,
 											}}
 										>
 											{config.banner7.title}
@@ -450,10 +456,9 @@ class HomePage extends Component {
 									smGutter="0px"
 									style={{ marginBottom: '50px' }}
 								>
-									{config.banner7.articles.map((d, index) => (
-										Object.keys(d).length ? (
-										// eslint-disable-next-line
-										<ImageCard key={index} src={d.src}>
+									{config.banner7.articles.map((d, index) => (Object.keys(d).length ? (
+											// eslint-disable-next-line
+											<ImageCard key={index} src={d.src}>
 												<div>
 													<Title>{d.title}</Title>
 													<p>{d.description}</p>
@@ -469,9 +474,10 @@ class HomePage extends Component {
 														Read Now
 													</SecondaryLink>
 												</div>
-										</ImageCard>)
-										: <div />
-									))}
+											</ImageCard>
+										) : (
+											<div />
+										)))}
 								</Grid>
 							</Layout>
 						</Section>
@@ -505,6 +511,8 @@ class HomePage extends Component {
 							<SupportGrid configName={config.name} />
 						</Layout>
 					</Section>
+					{config.name === 'web' && <DownloadStats />}
+					<AppbaseUsers />
 					<Footer configName={config.name} footerConfig={config.footer} />
 					<a
 						href={config.producthunt}

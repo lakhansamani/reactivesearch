@@ -24,9 +24,14 @@ class URLParamsProvider extends Component {
 			// update active components in selectedValues
 			Array.from(this.params.entries()).forEach((item) => {
 				try {
-					this.props.setValue(item[0], JSON.parse(item[1]));
+					const [component, value] = item;
+					const { label, showFilter, URLParams } = this.props.selectedValues[
+						component
+					] || { label: component };
+					this.props.setValue(component, JSON.parse(value), label, showFilter, URLParams);
 				} catch (e) {
 					// Do not set value if JSON parsing fails.
+					console.error(e);
 				}
 			});
 		};
@@ -121,7 +126,16 @@ class URLParamsProvider extends Component {
 				: window.location.search;
 
 			if (searchString !== this.searchString) {
-				window.dispatchEvent(new Event('popstate'));
+				let event;
+				if (typeof Event === 'function') {
+					event = new Event('popstate');
+				} else {
+					// Correctly fire popstate event on IE11 to prevent app crash.
+					event = document.createEvent('Event');
+					event.initEvent('popstate', true, true);
+				}
+
+				window.dispatchEvent(event);
 			}
 		}
 	};

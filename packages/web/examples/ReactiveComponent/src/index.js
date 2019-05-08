@@ -45,7 +45,7 @@ class Main extends Component {
 								},
 							})}
 						>
-							<CustomComponent />
+							{props => <CustomComponent {...props} />}
 						</ReactiveComponent>
 					</div>
 
@@ -56,7 +56,7 @@ class Main extends Component {
 							title="ReactiveList"
 							from={0}
 							size={20}
-							renderData={this.renderData}
+							renderItem={this.renderData}
 							pagination
 							react={{
 								and: 'CarSensor',

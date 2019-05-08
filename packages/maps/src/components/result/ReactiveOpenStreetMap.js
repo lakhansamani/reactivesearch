@@ -175,12 +175,16 @@ class ReactiveOpenStreetMap extends Component {
 					},
 				}}
 				touchZoom
+				onDragend={obj => {
+					params.handleOpenStreetOnDragEnd(obj.target.getBounds());
+				}}
 			>
 				<OpenStreetLayer
 					url={this.props.tileServer || 'https://{s}.tile.osm.org/{z}/{x}/{y}.png'}
 				/>
 				{markers}
 				{this.props.showMarkers && this.props.markers}
+				{params.renderSearchAsMove()}
 			</OpenStreetMap>
 		);
 	};
@@ -191,9 +195,34 @@ class ReactiveOpenStreetMap extends Component {
 }
 
 ReactiveOpenStreetMap.propTypes = {
-	tileServer: types.string,
-	showMarkers: types.bool,
+	autoCenter: types.bool,
+	autoClosePopover: types.bool,
+	center: types.location,
+	className: types.string,
+	componentId: types.stringRequired,
+	dataField: types.stringRequired,
+	defaultCenter: types.location,
+	defaultZoom: types.number,
+	defaultRadius: types.number,
+	defaultPin: types.string,
+	innerClass: types.style,
 	markers: types.children,
+	showMarkers: types.bool,
+	tileServer: types.string,
+	title: types.string,
+	onError: types.func,
+	onPopoverClick: types.func,
+	renderError: types.title,
+	react: types.react,
+	renderData: types.func,
+	renderAllData: types.func,
+	size: types.number,
+	sortBy: types.sortBy,
+	stream: types.bool,
+	streamAutoCenter: types.bool,
+	showMarkers: types.bool,
+	style: types.style,
+	unit: types.string,
 };
 
 export default ReactiveOpenStreetMap;
